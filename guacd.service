@@ -1,0 +1,14 @@
+# Borrowed from here and slightly modified:
+# https://raw.githubusercontent.com/apache/guacamole-server/master/src/guacd/systemd/guacd.service.in
+
+[Unit]
+Description=Guacamole Server
+Documentation=man:guacd(8)
+After=network.target
+
+[Service]
+ExecStart=@sbindir@/guacd
+Restart=on-abnormal
+
+[Install]
+WantedBy=multi-user.target
