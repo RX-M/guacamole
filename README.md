@@ -1,28 +1,33 @@
+![RX-M LLC][RX-M LLC]
+
 # RX-M Lab VM Guacamole Setup
+
+Using the base RX-M lab VM (see info [here](https://github.com/RX-M/classfiles/blob/master/lab-setup.md)), the following
+instructions will get you through adding VNC and Apache Guacamole so that the VM can be accessed via a web browser.
 
 Guacamole is separated into two pieces: guacamole-server, which provides the guacd proxy and related libraries, and
 guacamole-client, which provides the client to be served by your servlet container, usually Tomcat.
 
-guacamole-client is available in binary form, but guacamole-server (guacd) must (normally) be built from source, but we
-are going to extract it from a container.
+guacamole-client is available as a WAR, but guacamole-server (guacd) must be built from source. Docker can be used but
+we're not doing that here.
 
 
 ### 1. Install software & dependencies
 
-Tomcat requires Java to be installed on the so that any Java web application code can be executed. We can satisfy that
-requirement by installing OpenJDK. Guacamole relies on VNC and guacd has a number of dependencies for building and
-runtime.
+Tomcat requires Java to be installed; we can satisfy that requirement by installing OpenJDK. Guacamole relies on VNC and
+guacd has a number of dependencies to install.
 
 Update your apt-get package index and install Java, Tomcat, VNC and guacd dependencies:
 
 ```
 user@ubuntu:~$ sudo apt-get update
 
-user@ubuntu:~$ sudo apt-get install -y default-jdk tomcat8 vnc4server \
+user@ubuntu:~$ sudo apt-get install -y default-jdk tomcat8 authbind vnc4server \
 libcairo2-dev libjpeg-turbo8-dev libpng12-dev libossp-uuid-dev libvncserver-dev libwebp-dev
 ```
 
-Install and/or update gnome components:
+Install and/or update gnome components (our lab VM has a very minimal gnome install which unfortunately renders almost
+nothing in VNC):
 
 ```
 user@ubuntu:~$ sudo apt-get install --no-install-recommends ubuntu-desktop gnome-panel gnome-settings-daemon \
@@ -54,7 +59,7 @@ Log file is /home/user/.vnc/ubuntu:1.log
 user@ubuntu:~$
 ```
 
-**</example>**
+**END example**
 
 
 Create the `.vnc/` config directory, download and place the `xstartup` and `passwd` files:
@@ -62,19 +67,19 @@ Create the `.vnc/` config directory, download and place the `xstartup` and `pass
 ```
 user@ubuntu:~$ mkdir .vnc/
 
-user@ubuntu:~$ wget -qO ~/.vnc/xstartup https://s3-us-west-1.amazonaws.com/rx-m-vms/guacamole/xstartup
+user@ubuntu:~$ wget -qO ~/.vnc/xstartup https://raw.githubusercontent.com/RX-M/guacamole/master/xstartup
 
-user@ubuntu:~$ wget -qO ~/.vnc/passwd https://s3-us-west-1.amazonaws.com/rx-m-vms/guacamole/passwd
+user@ubuntu:~$ wget -qO ~/.vnc/passwd https://raw.githubusercontent.com/RX-M/guacamole/master/passwd
 ```
 
 
 ### 3. Set up VNC server as a systemd service
 
-Download the pre-configured unit file:
+Download the pre-configured unit file from this repo:
 
 ```
 user@ubuntu:~$ sudo wget -qO /etc/systemd/system/vncserver@.service \
-https://s3-us-west-1.amazonaws.com/rx-m-vms/guacamole/vncserver%40.service
+https://raw.githubusercontent.com/RX-M/guacamole/master/vncserver%40.service
 ```
 
 Make the system aware of the new unit file:
@@ -107,6 +112,8 @@ sudo systemctl status vncserver@1
 
 Obtain a copy of the guacamole-server source and extract it:
 
+> Guacamole releases page: https://guacamole.apache.org/releases/ for reference.
+
 ```
 user@ubuntu:~$ cd /tmp
 
@@ -116,15 +123,14 @@ user@ubuntu:/tmp$ tar -xzf guacamole-server-0.9.14.tar.gz
 ```
 
 Running `configure` will determine which libraries are available, selecting the appropriate components for building
-depending on what is installed. The `--with-init-dir=` flag creates a startup script for guacd into the target
-directory, so that we can configure guacd to start automatically on boot.
+depending on what is installed.
 
 ```
 user@ubuntu:/tmp$ cd guacamole-server-0.9.14/
 
 user@ubuntu:/tmp$ sudo mkdir /etc/guacamole
 
-user@ubuntu:/tmp/guacamole-server-0.9.14$ ./configure --with-init-dir=/etc/guacamole
+user@ubuntu:/tmp/guacamole-server-0.9.14$ ./configure
 
 ...
 
@@ -200,22 +206,20 @@ user@ubuntu:~$ sudo wget -qO /var/lib/tomcat8/webapps/guacamole.war \
 http://apache.claz.org/guacamole/0.9.14/binary/guacamole-0.9.14.war
 ```
 
-Guacamole releases page: https://guacamole.apache.org/releases/
-
 The configuration file `guacamole.properties` contains instructions for Guacamole to connect to guacd:
 
 ```
 user@ubuntu:~$ wget -qO /etc/guacamole/guacamole.properties \
-https://s3-us-west-1.amazonaws.com/rx-m-vms/guacamole/guacamole.properties
+https://raw.githubusercontent.com/RX-M/guacamole/master/guacamole.properties
 
 ```
 
 Guacamole uses the `user-mapping.xml` to define which users are allowed to authenticate to the Guacamole web interface
-(between <authorize> tags):
+(between `<authorize>` tags):
 
 ```
 user@ubuntu:~$ wget -qO /etc/guacamole/user-mapping.xml \
-https://s3-us-west-1.amazonaws.com/rx-m-vms/guacamole/user-mapping.xml
+https://raw.githubusercontent.com/RX-M/guacamole/master/user-mapping.xml
 ```
 
 Create a symbolic link for Tomcat to be able to read the file:
@@ -227,19 +231,13 @@ user@ubuntu:$ sudo ln -s /etc/guacamole/guacamole.properties /usr/share/tomcat8/
 ```
 
 
+### 6. Set up guacd as a systemd service
 
-
-
-
-
-
-### 6/ Set up guacd as a systemd service
-
-Download the pre-configured unit file from the guacamole-server GH repo:
+Download the pre-configured unit file:
 
 ```
-user@ubuntu:~$ sudo wget -qO /etc/systemd/system/guacd.service.in \
-https://raw.githubusercontent.com/apache/guacamole-server/master/src/guacd/systemd/guacd.service.in
+user@ubuntu:~$ sudo wget -qO /etc/systemd/system/guacd.service \
+https://raw.githubusercontent.com/RX-M/guacamole/master/guacd.service
 ```
 
 Make the system aware of the new unit file:
@@ -251,95 +249,95 @@ user@ubuntu:~$ sudo systemctl daemon-reload
 Enable the unit file:
 
 ```
-user@ubuntu:~$ sudo systemctl enable vncserver@1.service
+user@ubuntu:~$ sudo systemctl enable guacd.service
 ```
 
 Start it as you would start any other systemd service:
 
 ```
-user@ubuntu:~$ sudo systemctl start vncserver@1
+user@ubuntu:~$ sudo systemctl start guacd
 ```
 
 Verify that it started:
 
 ```
-sudo systemctl status vncserver@1
+user@ubuntu:~$ sudo systemctl status guacd
 ```
 
 
+### 7. Configure Tomcat
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### 4. Start services
-
-
-
-Set guacd to start before tomcat using guacd script at /etc/guacamole/guacd script
+Modify the Tomcat Connector port from 8080 to 80:
 
 ```
-user@ubuntu:~$ sudo /usr/local/sbin/guacd &
+user@ubuntu:~$ sudo vim /etc/tomcat8/server.xml
 
+...
+
+    <!-- A "Connector" represents an endpoint by which requests are received
+         and responses are returned. Documentation at :
+         Java HTTP Connector: /docs/config/http.html (blocking & non-blocking)
+         Java AJP  Connector: /docs/config/ajp.html
+         APR (HTTP/AJP) Connector: /docs/apr.html
+         Define a non-SSL/TLS HTTP/1.1 Connector on port 8080
+    -->
+    <Connector port="80" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               URIEncoding="UTF-8"
+               redirectPort="8443" />
+
+...
+```
+
+Run the following commands to provide tomcat7 read+execute on port 80:
+
+```
+user@ubuntu:~$ sudo touch /etc/authbind/byport/80
+
+user@ubuntu:~$ sudo chmod 500 /etc/authbind/byport/80
+```
+
+Uncomment and change `#AUTHBIND=no` to yes
+
+```
+user@ubuntu:~$ sudo vim /etc/default/tomcat8
+
+...
+
+# If you run Tomcat on port numbers that are all higher than 1023, then you
+# do not need authbind.  It is used for binding Tomcat to lower port numbers.
+# (yes/no, default: no)
+AUTHBIND=yes
+```
+
+Restart Tomcat:
+
+```
 user@ubuntu:~$ sudo systemctl restart tomcat8
 ```
 
-Double check that it started without errors:
+Verify that it started:
 
 ```
-sudo systemctl status tomcat8
+user@ubuntu:~$ sudo systemctl status tomcat8
 ```
 
-
-
-
-
-
-
-
-
-run vncserver and enter the password `ubuntu`:
+use netstat to confirm Tomcat is listening on 80:
 
 ```
-user@ubuntu:~$ vncserver -geometry 1280x720
+user@ubuntu:~$ sudo netstat -ntlp
 
-You will require a password to access your desktops.
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp6       0      0 :::80                   :::*                    LISTEN      78741/java      
 
-Password: ubuntu
-Verify: ubuntu
-
-New 'ubuntu:1 (user)' desktop is ubuntu:1
-
-Creating default startup script /home/user/.vnc/xstartup
-Starting applications specified in /home/user/.vnc/xstartup
-Log file is /home/user/.vnc/ubuntu:1.log
-
-user@ubuntu:~$
+...
 ```
 
+Go have some remote access fun via a browser at `http://<IP or FQDN or FQHN>/guacamole`
 
+<br>
 
+_Copyright (c) 2018 RX-M LLC, Cloud Native Consulting, all rights reserved_
 
-
-Reload the systemd daemon so that it knows about our service file:
-
-```
-sudo systemctl daemon-reload
-```
-
-Start the Tomcat service:
-
-```
-sudo systemctl start tomcat
-```
+[RX-M LLC]: http://rx-m.io/rxm-cnc.svg "RX-M LLC"
