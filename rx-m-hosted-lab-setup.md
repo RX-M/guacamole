@@ -44,22 +44,21 @@ higher, or Google Chrome
 
 1. Open your Internet browser and go to http://lab.rx-m.net/guacamole/
 
-<br>
+<br><img alt="login" width="300px" src="./images/01-login-page.png"/><br>
 
-<img alt="login" width="300px" src="./images/01-login.png"/>
+2. Log in as `student01` with the password `ubuntu`
 
-<br>
+<br><img alt="login" width="300px" src="./images/02-login.png"/><br>
 
-2. Log in as `user` with the password `user`
+3. Under the "All Connections" section, click on `student01-lab`. If somebody has performed the test already, you may
+see a picture of a desktop under the "Recent Connections" section above.
 
-<br>
+<br><img alt="desktop" width="300px" src="./images/03-VM-select.png"/><br>
 
-<img alt="desktop" width="300px" src="./images/02-desktop.png"/>
+4. This will take you to a desktop, indicating a successful test. You may also try opening a terminal and running a
+simple command such as: `ping -c 4 google.com` but it is not necessary to do so.
 
-<br>
-
-Reaching the desktop with the active terminal window is a successful test. You may also try a simple command such as:
-`ping -c 4 google.com` but it is not necessary to do so.
+<br><img alt="desktop" width="300px" src="./images/03-desktop.png"/><br>
 
 
 ### Accessing the lab environment during class
@@ -69,6 +68,6 @@ environment.
 
 <br>
 
-_Copyright (c) 2018 RX-M LLC, Cloud Native Consulting, all rights reserved_
+_Copyright (c) 2020 RX-M LLC, Cloud Native Consulting, all rights reserved_
 
 [RX-M LLC]: http://rx-m.io/rxm-cnc.svg "RX-M LLC"
