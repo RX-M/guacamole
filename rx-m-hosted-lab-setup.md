@@ -44,21 +44,21 @@ higher, or Google Chrome
 
 1. Open your Internet browser and go to http://lab.rx-m.net/guacamole/
 
-<br><img alt="login" width="300px" src="./images/01-login-page.png"/><br>
+<br><img alt="login" width="400px" src="./images/01-login-page.png"/><br>
 
 2. Log in as `student01` with the password `ubuntu`
 
-<br><img alt="login" width="300px" src="./images/02-login.png"/><br>
+<br><img alt="login" width="400px" src="./images/02-login.png"/><br>
 
 3. Under the "All Connections" section, click on `student01-lab`. If somebody has performed the test already, you may
 see a picture of a desktop under the "Recent Connections" section above.
 
-<br><img alt="desktop" width="300px" src="./images/03-VM-select.png"/><br>
+<br><img alt="desktop" width="400px" src="./images/03-VM-select.png"/><br>
 
 4. This will take you to a desktop, indicating a successful test. You may also try opening a terminal and running a
 simple command such as: `ping -c 4 google.com` but it is not necessary to do so.
 
-<br><img alt="desktop" width="300px" src="./images/03-desktop.png"/><br>
+<br><img alt="desktop" width="400px" src="./images/04-desktop.png"/><br>
 
 
 ### Accessing the lab environment during class
