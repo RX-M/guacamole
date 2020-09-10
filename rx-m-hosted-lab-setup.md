@@ -11,7 +11,7 @@ environment in an Amazon Web Services (AWS) regional datacenter.
 
 ### RX-M hosted lab network requirements
 
-Students will need access to http://lab.rx-m.net/guacamole/ which is a clientless remote desktop gateway powered by the
+Students will need access to https://lab.rx-m.net/guacamole/ which is a clientless remote desktop gateway powered by the
 open source Apache Guacamole project and backed by an AWS Elastic Compute Cloud (EC2) virtual machine instance. From
 this gateway, students will have access to the lab environment and any related resources associated with the training
 class.
@@ -42,11 +42,11 @@ can be allowed upon request by customers/partners.)
 To access the RX-M hosted lab environment, use an HTML5-compatible browser, such as Firefox, Internet Explorer 10 or
 higher, or Google Chrome
 
-1. Open your Internet browser and go to http://lab.rx-m.net/guacamole/
+1. Open your Internet browser and go to https://lab.rx-m.net/guacamole/
 
 <br><img alt="login" width="400px" src="./images/01-login-page.png"/><br>
 
-2. Log in as `student01` with the password `ubuntu`
+2. Log in with the username and password provided by RX-M for the test.
 
 <br><img alt="login" width="400px" src="./images/02-login.png"/><br>
 
@@ -70,4 +70,4 @@ environment.
 
 _Copyright (c) 2020 RX-M LLC, Cloud Native Consulting, all rights reserved_
 
-[RX-M LLC]: http://rx-m.io/rxm-cnc.svg "RX-M LLC"
+[RX-M LLC]: https://rx-m.io/rxm-cnc.svg "RX-M LLC"
