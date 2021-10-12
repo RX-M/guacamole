@@ -44,27 +44,64 @@ higher, or Google Chrome
 
 1. Open your Internet browser and go to https://lab.rx-m.net/guacamole/
 
-<br><img alt="login" width="400px" src="./images/01-login-page.png"/><br>
+![Access https://lab.rx-m.net/guacamole](./images/01-login-page.png)
 
 2. Log in with the username and password provided by RX-M for the test.
 
-<br><img alt="login" width="400px" src="./images/02-login.png"/><br>
+![Log in](./images/02-login.png)
 
 3. Under the "All Connections" section, click on `student01-lab`. If somebody has performed the test already, you may
 see a picture of a desktop under the "Recent Connections" section above.
 
-<br><img alt="desktop" width="400px" src="./images/03-VM-select.png"/><br>
+![Click on the lab VM entry](./images/03-VM-select.png)
 
 4. This will take you to a desktop, indicating a successful test. You may also try opening a terminal and running a
 simple command such as: `ping -c 4 google.com` but it is not necessary to do so.
 
-<br><img alt="desktop" width="400px" src="./images/04-desktop.png"/><br>
+![Resulting view](./images/04-desktop.png)
 
 
 ### Accessing the lab environment during class
 
 On the first day of class the instructor will assign each student access credentials to log in to the virtual
 environment.
+
+
+### Disabling Websocket Connections
+
+If students are having trouble accessing their lab system after logging in to Guacamole, they can try the following
+steps to avoid using a websocket connection.
+
+5. **Open Firefox browser** and type `about:config` in the Address Bar:
+
+![Access Firefox's advanced config page](./images/05-config-firefox.png)
+
+6. Firefox displays a warning about the risks of changing the settings. Click **Accept the Risk and Continue**:
+
+![Accept the risks and continue](./images/06-accept-risk.png)
+
+7. Type `websocket` in the Search bar at the top of the Advanced Configuration page. This shows several
+websocket-related options:
+
+![Search for websocket in the search bar](./images/07-search-websocket.png)
+
+8. Find `network.websocket.max-connections` and click the **Edit** button with the pencil icon:
+
+![Click Edit to change the websocket max connections setting](./images/08-edit-websocket-max-connections.png)
+
+9. Set the value of `network.websocket.max-connections` to `0` and click **Save**:
+
+![Set websocket max connections to 0](./images/09-set-websocket-max-connection-0.png)
+
+After saving the change, students should log out of their accounts, log back in, and try to use the student VM.
+Guacamole will automatically fall back to using http when using the Student VM. Accessing a student VM after making
+these changes results in a noticeably slower experience but should work if infrastructure does not allow for websocket
+connections.
+
+10. Users can reverse the changes by clicking the rightmost **Reset** button next to `network.websocket.max-connections`
+on the Firefox advanced configuration page:
+
+![Reset the changes](./images/10-reset-websocket-max-connections.png)
 
 <br>
 
