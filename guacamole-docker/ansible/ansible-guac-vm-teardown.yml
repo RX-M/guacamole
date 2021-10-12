@@ -1,0 +1,50 @@
+#
+# PLAY 1 - Tear down student VMs served through Guacamole
+#
+- name: Configure localhost - Installs python libs, integrates ci-vars and creates an AWS CI instance
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars:
+     aws_default_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+
+  tasks:
+# Gather information about VMs, filtering for guacamole-student tag and state
+  - name: Get VPC Subnet Info
+    ec2_vpc_subnet_facts:
+      filters:
+        "tag:Name": guac-vpc-private
+    register: guac_subnets
+  - ec2_instance_facts:
+      filters:
+        instance-state-name: running
+        "subnet-id": "{{ guac_subnets.subnets[0].subnet_id }}"
+
+# Delete CI VM based on the instance ID provided by ec2ec2_instance_facts
+  - name: Terminate CI AWS instance
+    ec2_instance:
+      region: "{{aws_default_region}}"
+      filters:
+        "instance-state-name": running
+        "subnet-id": "{{ guac_subnets.subnets[0].subnet_id }}"
+      state: absent
+
+# Delete EC2 key pair used for CI instance
+  - name: Check if local key exists
+    stat:
+      path: $HOME/.ssh/guacamole-student.pem
+    register: stat_result
+
+  - debug:
+      msg: "{{ stat_result.stat.exists }}"
+
+  - name: Delete local key if it exists
+    local_action: file path=$HOME/.ssh/guacamole-student.pem state=absent
+    when: stat_result.stat.exists
+
+  - name: Delete corresponding EC2 key pair
+    ec2_key:
+      region: "{{aws_default_region}}"
+      name: guacamole-student
+      state: absent

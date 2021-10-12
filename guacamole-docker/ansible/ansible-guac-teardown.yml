@@ -1,0 +1,108 @@
+# Ansible Playbook to tear down up a Guacamole deployment in AWS
+#
+# This Playbook has 2 Plays:
+# 1. Teardown the Guacamole Deploymente
+# 2. Teardown the supporting VPC structures
+
+#
+# PLAY 1 - Teardown the Guacamole Deployment
+#
+
+# Deletes CI VM, DNS entry and ssh keys
+- name: Terminate CI AWS instance
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars:
+     aws_default_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+     aws_access_key_id: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+     aws_secret_access_key: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+     aws_eip: "{{ lookup('env','AWS_EIP') }}"
+
+  tasks:
+  # Gather information about VMs, filtering for guacamole-host tag and state
+  - ec2_instance_facts:
+      filters:
+        "tag:role": guacamole-host
+        instance-state-name: running
+    register: guac_facts
+
+#  - debug:
+#      msg: "Deleting instance: {{ guac_facts.instances.0.instance_id }} and its public IP from DNS: {{ guac_facts.instances.0.public_ip_address }}; will pause for 10 seconds so user can abort if this is incorrect."
+
+  # Pause to verify that the debug message is indicating the correct instance
+#  - pause:
+#      seconds: 10
+
+# Delete DNS entry used for CI instance
+#  - route53:
+#      hosted_zone_id: Z1PKS0TBPA1WSF
+#      record: scarif.rx-m.net
+#      state: absent
+#      ttl: 60
+#      type: A
+#      value: "{{ guac_facts.instances.0.public_ip_address }}"
+#      zone: rx-m.net
+
+# Dissociate the EC2 instance from the EIP
+
+  - name: Dissociate lab-rx-m-net-do-not-delete EIP from new instance
+    ec2_eip:
+      aws_access_key: "{{aws_access_key_id}}"
+      aws_secret_key: "{{aws_secret_access_key}}"
+      ip: "{{aws_eip}}"
+      device_id: "{{ guac_facts.instances.0.instance_id }}"
+      state: absent
+
+# Delete CI VM based on the instance ID provided by ec2ec2_instance_facts
+  - name: Terminate CI AWS instance
+    ec2:
+      region: "{{aws_default_region}}"
+      instance_ids: "{{ guac_facts.instances.0.instance_id }}"
+      state: absent
+
+# Delete EC2 key pair used for CI instance
+  - name: Check if local key exists
+    stat:
+      path: $HOME/.ssh/guacamole-host.pem
+    register: stat_result
+
+  - debug:
+      msg: "{{ stat_result.stat.exists }}"
+
+  - name: Delete local key if it exists
+    local_action: file path=$HOME/.ssh/guacamole-host.pem state=absent
+    when: stat_result.stat.exists
+
+  - name: Delete corresponding EC2 key pair
+    ec2_key:
+      region: "{{aws_default_region}}"
+      name: guacamole-host
+      state: absent
+
+# Revert change to Route53 entry
+#
+# Alias to S3 endpoint
+# Alias Hosted Zone: Z3AQBSTGFYJSTF
+# Endpoint: s3-website-us-east-1.amazonaws.com.
+  - name: Remove EIP reference from lab.rx-m.net and redirect users to landing page
+    route53:
+      state: present
+      zone: rx-m.net
+      record: lab.rx-m.net
+      type: A
+      ttl: 300
+      alias: true
+      alias_hosted_zone_id: Z3AQBSTGFYJSTF
+      value:
+        - "s3-website-us-east-1.amazonaws.com."
+      wait: true
+      overwrite: true
+
+  - name: Display Route53 record information
+    route53_facts:
+      type: A
+      query: record_sets
+      hosted_zone_id: "Z1PKS0TBPA1WSF"
+      start_record_name: "lab.rx-m.com"

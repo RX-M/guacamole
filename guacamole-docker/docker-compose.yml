@@ -1,0 +1,73 @@
+version: '2.4'
+
+services:
+  mysql:
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=guacamole_db
+      - MYSQL_USER=guacamole_user
+      - MYSQL_PASSWORD=${GUACAMOLE_PASSWORD}
+    image: mysql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - guac
+    restart: always
+    volumes:
+      - /home/ubuntu/guacamole/:/docker-entrypoint-initdb.d/
+      - database:/var/lib/mysql
+
+
+  guacd:
+    depends_on:
+      - mysql
+    environment:
+      - GUACD_LOG_LEVEL=debug
+    image: guacamole/guacd
+    links:
+      - "mysql"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - guac
+    restart: always
+
+
+  guacamole:
+    depends_on:
+      - mysql
+      - guacd
+    environment:
+      - GUACD_HOSTNAME=guacd.guacamole-docker_guac
+      - MYSQL_DATABASE=guacamole_db
+      - MYSQL_HOSTNAME=mysql.guacamole-docker_guac
+      - MYSQL_USER=guacamole_user
+      - MYSQL_PASSWORD=${GUACAMOLE_PASSWORD}
+    image: guacamole/guacamole
+    links:
+      - "guacd"
+      - "mysql"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - guac
+    ports:
+      - "80:8080"
+    restart: always
+
+volumes:
+  database:
+    driver: local
+
+networks:
+  guac:
+    driver: bridge

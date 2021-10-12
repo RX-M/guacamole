@@ -1,0 +1,114 @@
+#
+# PLAY 1 - Launch student VMs
+#
+- name: Create VMs for students under the private subnet
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars:
+     aws_default_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+     student_vm_count: "{{ lookup('env','STUDENT_VM_COUNT') }}"
+     student_vm_type: "{{ lookup('env','STUDENT_VM_TYPE') }}"
+     local_home: "{{ lookup('env','HOME') }}"
+     local_user: "{{ lookup('env','USER') }}"
+     ci_pwd: "{{ lookup('env','SCARIF_CI_PW') }}"
+
+  tasks:
+  #
+  # 1. Gather facts about the VPC's private subnets and security groups
+  #
+  - name: Get VPC Subnet Info
+    ec2_vpc_subnet_facts:
+      filters:
+        "tag:Name": guac-vpc-private
+    register: guac_subnets
+
+  - name: Get Security Group Info
+    ec2_group_facts:
+      filters:
+        "tag:Name": guac-sg-private
+    register: guac_sg
+  # 1.2 Create SSH keys for Student VMs cloud instance
+  #
+  # Deletes existing keys and saves private key in ~/.ssh
+  - name: Create the .ssh directory for keys if it does not exist
+    file:
+      path: "{{local_home}}/.ssh"
+      owner: "{{local_user}}"
+      state: directory
+      mode: 0755
+  - name: create hashed CI server password
+    raw: python3 -c 'import bcrypt; pwd = "{{ci_pwd}}"; print("%s" % (bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt(rounds=10, prefix=b"2a")).decode("utf-8")), end="")'
+    register: ci_pwd_hash_dump
+  - name: Check for a local key
+    stat:
+      path: "{{local_home}}/.ssh/guacamole-student.pem"
+    register: stat_result
+  - name: Delete local key if it exists
+    local_action: file path="{{local_home}}/.ssh/guacamole-student.pem" state=absent
+    when: stat_result.stat.exists
+  - name: Confirm local key deleted
+    stat:
+      path: "{{local_home}}/.ssh/guacamole-student.pem"
+    register: stat_result
+  - name: Delete cluster key if it already exists
+    ec2_key:
+      name: guacamole-student
+      region: "{{aws_default_region}}"
+      state: absent
+    register: stat_cloud_result
+  - debug:
+      msg: "Local key status: {{ stat_result.stat.exists }} - cluster key status: {{ stat_cloud_result.msg }}"
+  - name: Create a new ec2 key pair, returns generated private key
+    ec2_key:
+      name: guacamole-student
+      region: "{{aws_default_region}}"
+    register: key_material
+    when: stat_result.stat.exists == False and stat_cloud_result != ""
+  - name: Save key material to file
+    local_action: copy content={{ key_material.key.private_key }} dest="{{local_home}}/.ssh/guacamole-student.pem"
+    when: key_material.changed
+  - name: Check that new key is saved
+    stat:
+      path: "{{local_home}}/.ssh/guacamole-student.pem"
+    register: stat_result
+  - name: Protect key
+    file:
+      path: "{{local_home}}/.ssh/guacamole-student.pem"
+      mode: 0400
+    when: stat_result.stat.exists
+
+  #
+  # 1.3 Create CI cloud instances for Student VMs
+  #
+  # Provisions 1-24 (user defined) Ubuntu 16.04 instance w/ 2 CPU & 4GB RAM on the private subnet
+  #
+  - name: Provision AWS instances for Student VMs behind Guacamole
+    ec2:
+      assign_public_ip: no
+      count: "{{student_vm_count}}"
+      group_id: "{{ guac_sg.security_groups[0].group_id }}"
+      image: ami-066668d6501e55018
+      volumes:
+        - device_name: /dev/sda1
+          delete_on_termination: true
+          volume_type: gp2
+          volume_size: 20
+          snapshot: snap-0d326cc69e914d494
+      instance_tags:
+        Name: "guacamole-student-vm"
+        role: "guacamole-student-vm"
+      instance_type: "{{student_vm_type}}"
+      key_name: guacamole-student
+      region: "{{aws_default_region}}"
+      vpc_subnet_id: "{{ guac_subnets.subnets[0].subnet_id }}"
+      wait: yes
+    register: studentvms
+
+  - name: Write Student VM DNS names to a file
+    lineinfile:
+      path: guac_ec2_dns
+      line: "{{ item.private_dns_name }}"
+      create: yes
+    with_items: "{{studentvms.instances}}"
